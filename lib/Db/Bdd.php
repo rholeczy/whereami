@@ -12,11 +12,28 @@ class Bdd
     private String $tableprefix;
     private $logger;
 
+    private $grpWhereAmI = 'whereami_global';
+
     public function __construct(IDbConnection $db, LoggerInterface $log)
     {
         $this->pdo = $db;
         $this->tableprefix = '*PREFIX*' . "whereami_";
         $this->logger = $log;
+        $this->initializeGroupWhereAmI();
+    }
+
+    /**
+     * Insert the group whereami_global in the database if it does not exist
+     */
+    public function initializeGroupWhereAmI()
+    {
+
+        $sql = "SELECT * FROM `*PREFIX*groups` WHERE `gId` = ?";
+
+        if (empty($this->execSQLNoJsonReturn($sql, array($this->grpWhereAmI)))) {
+            $sql = "INSERT INTO `*PREFIX*groups` (`gId`,`displayname`) VALUES (?,?)";
+            $this->execSQLNoData($sql, array($this->grpWhereAmI, $this->grpWhereAmI));
+        }
     }
 
     public function listUID()
@@ -247,6 +264,16 @@ class Bdd
                 $quadri = $quadri . substr($name[$i], 0, 1);
         }
         return strtoupper($quadri);
+    }
+
+    /**
+     * Return true if the user is in the group whereami_global
+     * @userId : current user id
+     */
+    public function isGrpWhereAmiGlobal($userId)
+    {
+        $sql = "SELECT * FROM `*PREFIX*group_user` WHERE `gid` = ? AND `uid` = ?";
+        return !empty($this->execSQLNoJsonReturn($sql, array($this->grpWhereAmI, $userId)));
     }
 
     /**

@@ -121,7 +121,8 @@ class PageController extends Controller
         // Return aggregated data as a JSON response
         return new DataResponse([
             'contracts' => $contracts,
-            'userByContract' => $userByContracts
+            'userByContract' => $userByContracts,
+            'isGrpGlobal' => $this->myDb->isGrpWhereAmiGlobal($this->userId),
         ], 200, ['Content-Type' => 'application/json']);
     }
 
