@@ -14,6 +14,8 @@ class Bdd
 
     private $grpWhereAmI = 'whereami_global';
 
+    private $grpAdmin = 'admin';
+
     public function __construct(IDbConnection $db, LoggerInterface $log)
     {
         $this->pdo = $db;
@@ -197,14 +199,22 @@ class Bdd
      * Retrieve activity reports for contracts within a specified date range.
      *
      * This method fetches activity reports including the number of contracts (`nb_contract`),
-     * associated usernames (`username`), aggregated activity values (`activity_report_value`),
+     * associated usernames (`uid`), aggregated activity values (`activity_report_value`),
      * and corresponding dates (`activity_report_date`) for a given time period.
+     * The results are filtered based on the user's group membership. If the user belongs
+     * to the "WhereAmI" global group or Nextcloud's default "admin" group, they will see all available data for every user. Otherwise,
+     * they will only see their own data.
      *
+     * @see Bdd::$grpWhereAmI Constant that holds the value for the "WhereAmI" global group.
      * @param string $dtStart The start date of the date range (YYYY-MM-DD format).
      * @param string $dtEnd The end date of the date range (YYYY-MM-DD format).
+     * @param string $uid The ID of the current user.
      * @return array Fetched database results containing activity report details.
      */
-    public function getContracts($dtStart, $dtEnd){
+    public function getContracts($dtStart, $dtEnd, $uid){
+        $isGlobalUser = $this->isGrpWanted($uid, $this->grpWhereAmI);
+        $isAdminUser = $this->isGrpWanted($uid, $this->grpAdmin);
+
         $sql = "SELECT 
                     REGEXP_SUBSTR(value, '\\\\b[Dd]\\\\d{5}\\\\b') as nb_contract,
                     uid,
@@ -238,9 +248,11 @@ class Bdd
                         AND FROM_UNIXTIME(oc.firstoccurence) BETWEEN ? AND ?
                         AND oc.deleted_at IS NULL
                 ) sr
+                WHERE 
+    	            (? = TRUE OR ? = TRUE) OR ? = uid
                 GROUP BY 
                     value, uid, first_occurence, last_occurence";
-        return $this->execSQLNoJsonReturn($sql, array($dtStart, $dtEnd));
+        return $this->execSQLNoJsonReturn($sql, array($dtStart, $dtEnd, $isGlobalUser, $isAdminUser, $uid));
     }
 
 
@@ -267,13 +279,13 @@ class Bdd
     }
 
     /**
-     * Return true if the user is in the group whereami_global
+     * Return true if the user is in the group wanted
      * @userId : current user id
      */
-    public function isGrpWhereAmiGlobal($userId)
+    public function isGrpWanted($userId,$grp)
     {
         $sql = "SELECT * FROM `*PREFIX*group_user` WHERE `gid` = ? AND `uid` = ?";
-        return !empty($this->execSQLNoJsonReturn($sql, array($this->grpWhereAmI, $userId)));
+        return !empty($this->execSQLNoJsonReturn($sql, array($grp, $userId)));
     }
 
     /**
