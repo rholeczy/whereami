@@ -14,7 +14,6 @@ class Bdd
 
     private $grpWhereAmI = 'whereami_global';
 
-    private $grpAdmin = 'admin';
 
     public function __construct(IDbConnection $db, LoggerInterface $log)
     {
@@ -202,7 +201,7 @@ class Bdd
      * associated usernames (`uid`), aggregated activity values (`activity_report_value`),
      * and corresponding dates (`activity_report_date`) for a given time period.
      * The results are filtered based on the user's group membership. If the user belongs
-     * to the "WhereAmI" global group or Nextcloud's default "admin" group, they will see all available data for every user. Otherwise,
+     * to the "WhereAmI" global group, they will see all available data for every user. Otherwise,
      * they will only see their own data.
      *
      * @see Bdd::$grpWhereAmI Constant that holds the value for the "WhereAmI" global group.
@@ -213,7 +212,6 @@ class Bdd
      */
     public function getContracts($dtStart, $dtEnd, $uid){
         $isGlobalUser = $this->isGrpWanted($uid, $this->grpWhereAmI);
-        $isAdminUser = $this->isGrpWanted($uid, $this->grpAdmin);
 
         $sql = "SELECT 
                     REGEXP_SUBSTR(value, '\\\\b[Dd]\\\\d{5}\\\\b') as nb_contract,
@@ -249,10 +247,10 @@ class Bdd
                         AND oc.deleted_at IS NULL
                 ) sr
                 WHERE 
-    	            (? = TRUE OR ? = TRUE) OR ? = uid
+    	            (? = TRUE) OR ? = uid
                 GROUP BY 
                     value, uid, first_occurence, last_occurence";
-        return $this->execSQLNoJsonReturn($sql, array($dtStart, $dtEnd, $isGlobalUser, $isAdminUser, $uid));
+        return $this->execSQLNoJsonReturn($sql, array($dtStart, $dtEnd, $isGlobalUser, $uid));
     }
 
 
